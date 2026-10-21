@@ -113,3 +113,5 @@ jobs:
           report("VERIFIED: Pin readable via API; correct board and direct Braided Amazon link.")
           report("No hourly schedule enabled. Trial Pins are visible only to the creator.")
           
+
+# Retry after verified OAuth v2 permissions and user-updated GitHub secret.
