@@ -1,0 +1,104 @@
+name: Pinterest single authorized test
+on:
+  push:
+    paths:
+      - '.github/workflows/pinterest-single-test.yml'
+permissions: {}
+concurrency:
+  group: pinterest-single-authorized-test
+  cancel-in-progress: false
+jobs:
+  publish-one:
+    if: github.run_attempt == 1 && github.event.head_commit.message == 'Publish one authorized Braided Pinterest test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify profile and publish one Braided Pin
+        env:
+          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+        shell: python
+        run: |
+          import base64, hashlib, json, os, sys, urllib.request, urllib.error
+          TOKEN = os.environ["PINTEREST_ACCESS_TOKEN"].strip()
+          BASE = "https://api.pinterest.com/v5"
+          TITLE = "Men's Braided Leather Belt | Texture That Completes the Look"
+          LINK = "https://www.amazon.co.uk/dp/B0GXS6542B"
+          BOARD = "Daniel Mason | Leather Belts & Style"
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect())
+          def report(message):
+              print(message, flush=True)
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+                  out.write(message + "\n\n")
+          def api(path, data=None):
+              req = urllib.request.Request(BASE + path, data=json.dumps(data).encode() if data is not None else None,
+                  headers={"Authorization": "Bearer " + TOKEN, "Accept": "application/json", "Content-Type": "application/json"},
+                  method="POST" if data is not None else "GET")
+              try:
+                  with opener.open(req, timeout=60) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  report("Pinterest HTTP " + str(error.code) + " at " + path.split("?")[0] + ". No automatic retry.")
+                  sys.exit(1)
+              except Exception:
+                  report("Request outcome uncertain or network failure. Do not rerun publishing; reconcile Pinterest first.")
+                  sys.exit(1)
+          def items(path):
+              bookmark = None
+              for _ in range(50):
+                  url = path + ("&" if "?" in path else "?") + "page_size=100"
+                  if bookmark:
+                      url += "&bookmark=" + urllib.parse.quote(bookmark, safe="")
+                  payload = api(url)
+                  for item in payload.get("items", []):
+                      yield item
+                  bookmark = payload.get("bookmark")
+                  if not bookmark:
+                      return
+              report("Pagination limit reached; publishing aborted.")
+              sys.exit(1)
+          import urllib.parse
+          user = api("/user_account")
+          if user.get("username", "").lower() != "danielmason77":
+              report("Wrong Pinterest profile; publishing aborted.")
+              sys.exit(1)
+          report("Verified Pinterest profile: @danielmason77")
+          boards = [b for b in items("/boards") if b.get("name") == BOARD]
+          if len(boards) != 1:
+              report("Expected exactly one dedicated board; found " + str(len(boards)) + ". Nothing published.")
+              sys.exit(1)
+          board_id = str(boards[0]["id"])
+          for pin in items("/boards/" + board_id + "/pins"):
+              if pin.get("title") == TITLE and pin.get("link") == LINK:
+                  report("Matching Pin already exists: https://www.pinterest.com/pin/" + str(pin["id"]) + "/")
+                  sys.exit(0)
+          asset_url = "https://raw.githubusercontent.com/danielmason77/-danielmason-pinterest-publisher/a22f2c9484c21825653249144c72c050c078744b/assets/braided-texture-pin.jpg.b64"
+          with opener.open(asset_url, timeout=30) as response:
+              encoded = response.read(2000000).decode("ascii").strip()
+          image = base64.b64decode(encoded, validate=True)
+          if hashlib.sha256(image).hexdigest() != "0e6334b81ce466d0c17ec297acbdaa83f4ca2a7d4608004bcceb5bd74aa3da20":
+              report("Creative checksum mismatch; publishing aborted.")
+              sys.exit(1)
+          payload = {
+           "board_id": board_id, "title": TITLE,
+           "description": "The finishing detail that brings a smart-casual outfit together. Style the Daniel Mason braided leather belt with ivory chinos, dark denim or relaxed tailoring. Save this look for your next outfit, then shop the belt on Amazon UK.",
+           "link": LINK,
+           "alt_text": "Daniel Mason brown braided leather belt with a brass-tone buckle, styled with ivory chinos and an olive shirt.",
+           "media_source": {"source_type": "image_base64", "content_type": "image/jpeg", "data": encoded}
+          }
+          report("Submitting ONE authorized Braided Pin. Trial visibility restrictions still apply.")
+          created = api("/pins", payload)
+          pin_id = str(created.get("id", ""))
+          if not pin_id.isdigit():
+              report("Unexpected create response. Reconcile manually before any further publishing.")
+              sys.exit(1)
+          report("CREATED: https://www.pinterest.com/pin/" + pin_id + "/")
+          verified = api("/pins/" + pin_id)
+          if str(verified.get("board_id")) != board_id or verified.get("link") != LINK:
+              report("Created Pin requires manual verification. Do not republish.")
+              sys.exit(1)
+          report("VERIFIED: Pin readable via API; correct board and direct Braided Amazon link.")
+          report("No hourly schedule enabled. Trial Pins are visible only to the creator.")
+          
