@@ -1,0 +1,32 @@
+{
+  "status": "draft",
+  "public_publishing_requires": "Pinterest Standard access",
+  "paid_ads": false,
+  "pins": [
+    {
+      "id": "braided-texture-01",
+      "product": "Braided Leather Belt",
+      "asin": "B0GXS6542B",
+      "title": "Men’s Braided Leather Belt | Texture That Completes the Look",
+      "description": "The finishing detail that brings a smart-casual outfit together. Style the Daniel Mason braided leather belt with ivory chinos, dark denim or relaxed tailoring. Save this look for your next outfit, then shop the belt on Amazon UK.",
+      "link": "https://www.amazon.co.uk/dp/B0GXS6542B",
+      "image_headline": "Texture makes the difference.",
+      "alt_text": "Close-up of a Daniel Mason brown braided leather belt with a brass-tone buckle, worn with ivory chinos and an olive shirt.",
+      "creative_file": "braided-texture-pin.png"
+    },
+    {
+      "id": "reversible-two-looks-01",
+      "product": "Reversible Leather Belt",
+      "asin": "B0HBKTZRRT",
+      "title": "Men’s Reversible Leather Belt | One Belt, Two Looks",
+      "description": "One belt. Two ways to finish your look. Discover the Daniel Mason reversible leather belt for a wardrobe that moves from casual outfits to smarter occasions. Save this outfit idea and shop the exact belt on Amazon UK.",
+      "link": "https://www.amazon.co.uk/dp/B0HBKTZRRT",
+      "image_headline": "One belt. Two looks.",
+      "alt_text": "Daniel Mason reversible leather belt shown on its brown side with a silver-tone buckle, styled with ivory trousers and a charcoal T-shirt.",
+      "creative_file": "reversible-two-looks-pin.png"
+    }
+  ],
+  "asset_status": "Two generated visual previews created in conversation; creative filenames are intended destinations, not hosted image URLs. Match product geometry to approved original before upload.",
+  "attribution": "Direct Amazon UK product links; Amazon Attribution tracking has not been attached or verified.",
+  "publishing_status": "No Pins published or scheduled by this file."
+}
