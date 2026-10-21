@@ -1,3 +1,4 @@
+# Retry after user replaced the OAuth token; previous run stopped before POST.
 name: Pinterest single authorized test
 on:
   push:
