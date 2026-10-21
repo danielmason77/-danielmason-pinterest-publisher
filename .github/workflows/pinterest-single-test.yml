@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Verify profile and publish one Braided Pin
         env:
-          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_SANDBOX_TOKEN }}
         shell: python
         run: |
           import base64, hashlib, json, os, sys, urllib.request, urllib.error
