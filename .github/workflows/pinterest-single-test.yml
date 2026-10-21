@@ -72,10 +72,13 @@ jobs:
               sys.exit(1)
           import urllib.parse
           user = api("/user_account")
-          if user.get("username", "").lower() != "danielmason77":
-              report("Wrong Pinterest profile; publishing aborted.")
+          sandbox_user = user.get("username", "").lower()
+          allowed_users = {"danielmason77", "04b8i5dm2tslrafvnaww7epbkl2gci"}
+          if sandbox_user not in allowed_users:
+              report("Sandbox token belongs to an unrecognized profile; stopped before any creation.")
               sys.exit(1)
-          report("Verified Pinterest profile: @danielmason77")
+          report("Verified Sandbox identity: " + ("@danielmason77" if sandbox_user == "danielmason77" else "Daniel Mason app-owner test account"))
+          report("API Sandbox only; this does not publish to the production profile.")
           boards = [b for b in items("/boards") if b.get("name") == BOARD]
           if not boards:
               report("Creating one dedicated SECRET board in API Sandbox only.")
@@ -124,3 +127,5 @@ jobs:
 # Retry after verified OAuth v2 permissions and user-updated GitHub secret.
 
 # Connection check passed for @danielmason77 before this single test.
+
+# Run after user saved the separate Sandbox token.
