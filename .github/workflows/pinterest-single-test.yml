@@ -1,4 +1,3 @@
-# Retry after user replaced the OAuth token; previous run stopped before POST.
 name: Pinterest single authorized test
 on:
   push:
@@ -41,6 +40,17 @@ jobs:
                   with opener.open(req, timeout=60) as response:
                       return json.load(response)
               except urllib.error.HTTPError as error:
+                  try:
+                      detail = json.loads(error.read(4096))
+                      code = detail.get("code")
+                      if isinstance(code, int):
+                          report("Pinterest error code: " + str(code))
+                      message = str(detail.get("message", ""))[:300].replace(TOKEN, "[redacted]")
+                      import re
+                      message = re.sub(r"[A-Za-z0-9_/+=-]{40,}", "[redacted]", message)
+                      report("Pinterest message: " + message)
+                  except Exception:
+                      pass
                   report("Pinterest HTTP " + str(error.code) + " at " + path.split("?")[0] + ". No automatic retry.")
                   sys.exit(1)
               except Exception:
