@@ -1,0 +1,89 @@
+name: Pinterest connection check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pinterest-check.yml'
+
+permissions: {}
+
+concurrency:
+  group: pinterest-connection-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check token and read Pinterest account
+        env:
+          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+        shell: python
+        run: |
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          token = os.environ.get("PINTEREST_ACCESS_TOKEN", "").strip()
+          summary = []
+
+          def report(message):
+              print(message)
+              summary.append(message)
+
+          def save_summary():
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+                  f.write("\n".join(summary) + "\n")
+
+          if not token:
+              report("FAIL: PINTEREST_ACCESS_TOKEN is missing or empty.")
+              save_summary()
+              sys.exit(1)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect())
+          failed = False
+          for label, path in [
+              ("Account", "/user_account"),
+              ("Boards", "/boards?page_size=1"),
+          ]:
+              request = urllib.request.Request(
+                  "https://api.pinterest.com/v5" + path,
+                  headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
+                  method="GET",
+              )
+              try:
+                  with opener.open(request, timeout=30) as response:
+                      payload = json.load(response)
+                      status = response.status
+                  if not isinstance(payload, dict):
+                      raise ValueError("Unexpected response")
+                  if label == "Boards" and not isinstance(payload.get("items"), list):
+                      raise ValueError("Unexpected boards response")
+                  report("PASS: " + label + " read access (HTTP " + str(status) + ").")
+                  if label == "Boards":
+                      report("At least one board exists: " + ("yes" if payload["items"] else "no") + ".")
+              except urllib.error.HTTPError as error:
+                  failed = True
+                  advice = {
+                      401: "Token invalid or expired.",
+                      403: "Check token scopes, account access, or token environment.",
+                      429: "Rate limited; retry later.",
+                  }.get(error.code, "Pinterest request failed.")
+                  report("FAIL: " + label + " HTTP " + str(error.code) + ". " + advice)
+              except Exception:
+                  failed = True
+                  report("FAIL: " + label + " network or response error; no sensitive response logged.")
+
+          report("This test makes GET requests only. No Pins or boards are created.")
+          report("Publishing permissions are not verified by this test.")
+          save_summary()
+          sys.exit(1 if failed else 0)
