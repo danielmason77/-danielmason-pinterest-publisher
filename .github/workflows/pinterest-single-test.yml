@@ -1,4 +1,4 @@
-name: Pinterest single authorized test
+name: Pinterest Sandbox single authorized test
 on:
   push:
     paths:
@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish-one:
-    if: github.run_attempt == 1 && github.event.head_commit.message == 'Publish one authorized Braided Pinterest test'
+    if: github.run_attempt == 1 && github.event.head_commit.message == 'Create one authorized Braided Sandbox test'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -20,10 +20,10 @@ jobs:
         run: |
           import base64, hashlib, json, os, sys, urllib.request, urllib.error
           TOKEN = os.environ["PINTEREST_ACCESS_TOKEN"].strip()
-          BASE = "https://api.pinterest.com/v5"
+          BASE = "https://api-sandbox.pinterest.com/v5"
           TITLE = "Men's Braided Leather Belt | Texture That Completes the Look"
           LINK = "https://www.amazon.co.uk/dp/B0GXS6542B"
-          BOARD = "Daniel Mason | Leather Belts & Style"
+          BOARD = "Daniel Mason | API Sandbox Test"
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, req, fp, code, msg, headers, newurl):
                   return None
@@ -77,13 +77,20 @@ jobs:
               sys.exit(1)
           report("Verified Pinterest profile: @danielmason77")
           boards = [b for b in items("/boards") if b.get("name") == BOARD]
+          if not boards:
+              report("Creating one dedicated SECRET board in API Sandbox only.")
+              board = api("/boards", {"name": BOARD, "description": "API Sandbox integration test only.", "privacy": "SECRET"})
+              if not str(board.get("id", "")).isdigit():
+                  report("Unexpected board creation result; stop and reconcile Sandbox.")
+                  sys.exit(1)
+              boards = [board]
           if len(boards) != 1:
               report("Expected exactly one dedicated board; found " + str(len(boards)) + ". Nothing published.")
               sys.exit(1)
           board_id = str(boards[0]["id"])
           for pin in items("/boards/" + board_id + "/pins"):
               if pin.get("title") == TITLE and pin.get("link") == LINK:
-                  report("Matching Pin already exists: https://www.pinterest.com/pin/" + str(pin["id"]) + "/")
+                  report("Matching Sandbox Pin already exists, ID: " + str(pin["id"]))
                   sys.exit(0)
           asset_url = "https://raw.githubusercontent.com/danielmason77/-danielmason-pinterest-publisher/a22f2c9484c21825653249144c72c050c078744b/assets/braided-texture-pin.jpg.b64"
           with opener.open(asset_url, timeout=30) as response:
@@ -99,19 +106,19 @@ jobs:
            "alt_text": "Daniel Mason brown braided leather belt with a brass-tone buckle, styled with ivory chinos and an olive shirt.",
            "media_source": {"source_type": "image_base64", "content_type": "image/jpeg", "data": encoded}
           }
-          report("Submitting ONE authorized Braided Pin. Trial visibility restrictions still apply.")
+          report("Submitting ONE authorized Braided Pin to API Sandbox only.")
           created = api("/pins", payload)
           pin_id = str(created.get("id", ""))
           if not pin_id.isdigit():
               report("Unexpected create response. Reconcile manually before any further publishing.")
               sys.exit(1)
-          report("CREATED: https://www.pinterest.com/pin/" + pin_id + "/")
+          report("CREATED Sandbox Pin ID: " + pin_id)
           verified = api("/pins/" + pin_id)
           if str(verified.get("board_id")) != board_id or verified.get("link") != LINK:
               report("Created Pin requires manual verification. Do not republish.")
               sys.exit(1)
-          report("VERIFIED: Pin readable via API; correct board and direct Braided Amazon link.")
-          report("No hourly schedule enabled. Trial Pins are visible only to the creator.")
+          report("VERIFIED: Sandbox Pin readable via API; correct board and direct Braided Amazon link.")
+          report("No hourly schedule enabled. Sandbox test only; no production Pin created.")
           
 
 # Retry after verified OAuth v2 permissions and user-updated GitHub secret.
