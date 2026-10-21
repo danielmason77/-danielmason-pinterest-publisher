@@ -1,0 +1,6 @@
+.pinterest_credentials.json
+.pinterest_credentials*.json
+.env
+.env.*
+__pycache__/
+*.pyc
