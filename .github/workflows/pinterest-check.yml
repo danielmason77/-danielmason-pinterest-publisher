@@ -45,6 +45,15 @@ jobs:
               save_summary()
               sys.exit(1)
 
+          if token.startswith(('"', "'")) or token.endswith(('"', "'")):
+              report("FAIL: Secret contains surrounding quotation marks. Save the token value only.")
+              save_summary()
+              sys.exit(1)
+          if token.startswith("{") or token.lower().startswith("bearer ") or any(ch.isspace() for ch in token):
+              report("FAIL: Secret has JSON, Bearer prefix, or internal whitespace. Save the token value only.")
+              save_summary()
+              sys.exit(1)
+
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, req, fp, code, msg, headers, newurl):
                   return None
@@ -66,6 +75,12 @@ jobs:
                       status = response.status
                   if not isinstance(payload, dict):
                       raise ValueError("Unexpected response")
+                  if label == "Account":
+                      if payload.get("username", "").lower() != "danielmason77":
+                          report("FAIL: Token belongs to another Pinterest profile.")
+                          failed = True
+                      else:
+                          report("PASS: Verified profile @danielmason77.")
                   if label == "Boards" and not isinstance(payload.get("items"), list):
                       raise ValueError("Unexpected boards response")
                   report("PASS: " + label + " read access (HTTP " + str(status) + ").")
